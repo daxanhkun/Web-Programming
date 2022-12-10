@@ -4,24 +4,63 @@ from django.db import models
 from django.db.models import Sum
 from django.shortcuts import reverse
 from django_countries.fields import CountryField
+from django.utils.text import slugify
 
 
-CATEGORY_CHOICES = (
-    ('S', 'Shirt'),
-    ('SW', 'Sport wear'),
-    ('OW', 'Outwear')
-)
 
 LABEL_CHOICES = (
-    ('P', 'primary'),
+    ('P', 'danger'),
     ('S', 'secondary'),
-    ('D', 'danger')
+    ('D', 'primary')
 )
+
+TITLE_MAP = {
+        'P': 'Professor',
+        'S': 'PhD',
+        'D': 'Dr.'
+        }
 
 ADDRESS_CHOICES = (
     ('B', 'Billing'),
     ('S', 'Shipping'),
 )
+
+
+def construct_color_map():
+    COLOR_CONSTRUCTOR = {
+            'purple': ['dermatology'],
+            'primary-color': ['ophthalmology'],
+            }
+    res = {}
+    for color, affected_list in COLOR_CONSTRUCTOR.items():
+        for i in affected_list:
+            res[i] = color
+    return res
+
+BADGE_COLOR_MAP = construct_color_map()
+
+
+class Specialty(models.Model):
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=100, unique=True)
+
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super(Specialty, self).save(*args, **kwargs)
+
+
+
+    def __str__(self):
+        return self.name
+
+
+    @property
+    def badge_color(self):
+        return BADGE_COLOR_MAP[self.slug] if self.slug in BADGE_COLOR_MAP else 'primary-color'
+
+
 
 
 class UserProfile(models.Model):
@@ -34,22 +73,27 @@ class UserProfile(models.Model):
         return self.user.username
 
 
-class Item(models.Model):
-    title = models.CharField(max_length=100)
+class Doctor(models.Model):
+    name = models.CharField(max_length=100)
     price = models.FloatField()
     discount_price = models.FloatField(blank=True, null=True)
-    category = models.CharField(choices=CATEGORY_CHOICES, max_length=2)
+    specialties = models.ManyToManyField(Specialty)
     label = models.CharField(choices=LABEL_CHOICES, max_length=1)
     slug = models.SlugField()
     description = models.TextField()
     image = models.ImageField()
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super(Doctor, self).save(*args, **kwargs)
+
     def __str__(self):
-        return self.title
+        return self.name
 
     def get_absolute_url(self):
         return reverse("core:product", kwargs={
-            'slug': self.slug
+            'pk': self.pk
         })
 
     def get_add_to_cart_url(self):
@@ -57,17 +101,26 @@ class Item(models.Model):
             'slug': self.slug
         })
 
+    def get_booking_url(self):
+        return reverse("core:booking", kwargs={
+            'pk': self.pk
+        })
+
     def get_remove_from_cart_url(self):
         return reverse("core:remove-from-cart", kwargs={
             'slug': self.slug
         })
+
+    def title(self):
+        return TITLE_MAP[self.label]
+
 
 
 class OrderItem(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              on_delete=models.CASCADE)
     ordered = models.BooleanField(default=False)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    item = models.ForeignKey(Doctor, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
 
     def __str__(self):
@@ -86,6 +139,15 @@ class OrderItem(models.Model):
         if self.item.discount_price:
             return self.get_total_discount_item_price()
         return self.get_total_item_price()
+
+
+class Booking(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    paid = models.BooleanField(default=False)
+    book_date = models.DateTimeField(auto_now_add=True)
+    payment_date = models.DateTimeField(default=None, null=True)
+    examination_date = models.DateTimeField()
+
 
 
 class Order(models.Model):
@@ -129,7 +191,7 @@ class Order(models.Model):
             total += order_item.get_final_price()
         if self.coupon:
             total -= self.coupon.amount
-        return total
+        return round(total, 2)
 
 
 class Address(models.Model):

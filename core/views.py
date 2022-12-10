@@ -11,9 +11,11 @@ from django.shortcuts import redirect
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.views.generic import ListView, DetailView, View
+from django.db.models import Q
+from core.momo.collection_link import *
 
 from .forms import CheckoutForm, CouponForm, RefundForm, PaymentForm
-from .models import Item, OrderItem, Order, Address, Payment, Coupon, Refund, UserProfile
+from .models import Doctor, OrderItem, Order, Address, Payment, Coupon, Refund, UserProfile, Specialty
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -24,7 +26,7 @@ def create_ref_code():
 
 def products(request):
     context = {
-        'items': Item.objects.all()
+        'items': Doctor.objects.all()
     }
     return render(request, "products.html", context)
 
@@ -44,9 +46,8 @@ class CheckoutView(View):
             form = CheckoutForm()
             context = {
                 'form': form,
-                'couponform': CouponForm(),
                 'order': order,
-                'DISPLAY_COUPON_FORM': True
+                'doctor': Doctor.objects.get(pk=kwargs['pk'])
             }
 
             shipping_address_qs = Address.objects.filter(
@@ -197,6 +198,9 @@ class CheckoutView(View):
                     return redirect('core:payment', payment_option='stripe')
                 elif payment_option == 'P':
                     return redirect('core:payment', payment_option='paypal')
+                elif payment_option == 'M':
+                    momo_response = momo_payment(order.get_total(), order.pk)
+                    return redirect(momo_response['payUrl'])
                 else:
                     messages.warning(
                         self.request, "Invalid payment option selected")
@@ -346,9 +350,29 @@ class PaymentView(View):
 
 
 class HomeView(ListView):
-    model = Item
+    model = Doctor
     paginate_by = 10
     template_name = "home.html"
+    def get_queryset(self):
+        try:
+            specialty = Specialty.objects.get(slug=self.request.GET.get('specialty'))
+        except:
+            specialty = None
+        search = self.request.GET.get('search')
+        if search: return Doctor.objects.filter(name__contains=search)
+        return Doctor.objects.filter(specialties=specialty) if specialty else Doctor.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            specialty = Specialty.objects.get(slug=self.request.GET.get('specialty'))
+        except:
+            specialty = None
+        context['filter_specialty'] = specialty
+        context['recommended_doctors'] = Doctor.objects.all()[:3]
+        return context
+
+
 
 
 class OrderSummaryView(LoginRequiredMixin, View):
@@ -364,14 +388,19 @@ class OrderSummaryView(LoginRequiredMixin, View):
             return redirect("/")
 
 
-class ItemDetailView(DetailView):
-    model = Item
+class DoctorDetailView(DetailView):
+    model = Doctor
     template_name = "product.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(DoctorDetailView, self).get_context_data(**kwargs)
+        context['items'] = Doctor.objects.exclude(pk=self.object.pk).order_by('?')[:3]
+        return context
 
 
 @login_required
 def add_to_cart(request, slug):
-    item = get_object_or_404(Item, slug=slug)
+    item = get_object_or_404(Doctor, slug=slug)
     order_item, created = OrderItem.objects.get_or_create(
         item=item,
         user=request.user,
@@ -401,7 +430,7 @@ def add_to_cart(request, slug):
 
 @login_required
 def remove_from_cart(request, slug):
-    item = get_object_or_404(Item, slug=slug)
+    item = get_object_or_404(Doctor, slug=slug)
     order_qs = Order.objects.filter(
         user=request.user,
         ordered=False
@@ -429,7 +458,7 @@ def remove_from_cart(request, slug):
 
 @login_required
 def remove_single_item_from_cart(request, slug):
-    item = get_object_or_404(Item, slug=slug)
+    item = get_object_or_404(Doctor, slug=slug)
     order_qs = Order.objects.filter(
         user=request.user,
         ordered=False
@@ -517,3 +546,18 @@ class RequestRefundView(View):
             except ObjectDoesNotExist:
                 messages.info(self.request, "This order does not exist.")
                 return redirect("core:request-refund")
+
+def checkout_success(request):
+    pk=request.GET.get('pk')
+    order = Order.objects.get(pk=pk)
+    order_items = order.items.all()
+    order_items.update(ordered=True)
+    for item in order_items:
+        item.save()
+
+    order.ordered = True
+    order.save()
+    messages.success(request, "Your order was successful!")
+    return redirect("/")
+
+
