@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Doctor, OrderItem, Order, Payment, Coupon, Refund, Address, UserProfile, Specialty
+from .models import Doctor, OrderItem, Order, Payment, Coupon, Refund, Address, UserProfile, Specialty, Booking
 
 
 def make_refund_accepted(modeladmin, request, queryset):
@@ -55,12 +55,41 @@ class AddressAdmin(admin.ModelAdmin):
     search_fields = ['user', 'street_address', 'apartment_address', 'zip']
 
 
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ['user',
+                    'doctor',
+                    'booked_date',
+                    'payment_date',
+                    'examination_date',
+                    'total',
+                    ]
+    list_display_links = [
+        'user',
+        'doctor',
+        'booked_date',
+        'payment_date',
+        'examination_date',
+        'total',
+    ]
+    # list_filter = ['ordered',
+    #                'being_delivered',
+    #                'received',
+    #                'refund_requested',
+    #                'refund_granted']
+    # search_fields = [
+    #     'user__username',
+    #     'ref_code'
+    # ]
+    # actions = [make_refund_accepted]
+
+
 admin.site.register(Specialty)
 admin.site.register(Doctor)
-admin.site.register(OrderItem)
-admin.site.register(Order, OrderAdmin)
-admin.site.register(Payment)
-admin.site.register(Coupon)
-admin.site.register(Refund)
-admin.site.register(Address, AddressAdmin)
-admin.site.register(UserProfile)
+# admin.site.register(OrderItem)
+# admin.site.register(Order, OrderAdmin)
+# admin.site.register(Payment)
+# admin.site.register(Coupon)
+# admin.site.register(Refund)
+# admin.site.register(Address, AddressAdmin)
+# admin.site.register(UserProfile)
+admin.site.register(Booking, BookingAdmin)

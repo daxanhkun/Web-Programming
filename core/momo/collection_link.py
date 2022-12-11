@@ -9,7 +9,7 @@ def momo_payment(amount, order_pk):
     endpoint = "https://test-payment.momo.vn/v2/gateway/api/create"
     accessKey = "F8BBA842ECF85"
     secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
-    orderInfo = "Payment for Urban Wear"
+    orderInfo = "Payment for BK MEC"
     partnerCode = "MOMO"
     redirectUrl = f"http://127.0.0.1:8000/checkout/success/?pk={order_pk}"
     ipnUrl = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b"
@@ -17,9 +17,9 @@ def momo_payment(amount, order_pk):
     orderId = str(uuid.uuid4())
     requestId = str(uuid.uuid4())
     extraData = ""  # pass empty value or Encode base64 JsonString
-    partnerName = "Urban Wear"
+    partnerName = "BK MEC"
     requestType = "payWithMethod"
-    storeId = "Test Store"
+    storeId = "BK"
     orderGroupId = ""
     autoCapture = True
     lang = "vi"

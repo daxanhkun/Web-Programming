@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -13,20 +14,26 @@
               {% csrf_token %}
 
               <h3>Choose time</h3>
-              <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
-                <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1"/>
+              <div class="input-group date mb-2" id="datetimepicker1" data-target-input="nearest">
+                <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" name="examination_date" required/>
                 <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
                   <div class="input-group-text"><i class="fa fa-calendar"></i></div>
                 </div>
               </div>
+              <iframe id="gmap" src="{% static 'gg_map.html' %}"
+                      width="100%" height="500px"
+                                   style="border:0;"
+                                   loading="lazy" class="border border-primary">
+              </iframe>
 
-              <script>
-                $(function () {
-                                  $("#datetimepicker1").datetimepicker();
-                                });
-              </script>
 
-              <h3>Which medical specialties you want to examine?</h3>
+              <h3 id="show-address">Address: </h3>
+              <input type="hidden" name="address" required/>
+              <button id="confirm-address" class="btn btn-primary" type="button">Confirm address</button>
+
+              <h3>Describe your problem: </h3>
+              <textarea class="form-control" name="description" id="exampleFormControlTextarea1" rows="3" required></textarea>
+              <!-- <h3>Which medical specialties you want to examine?</h3> -->
 
               <hr>
 
@@ -42,7 +49,10 @@
               </div>
 
               <hr class="mb-4">
-              <button class="btn btn-primary btn-lg btn-block" type="submit">Continue to checkout</button>
+              <div class="text-center mb-2">
+                Total: ${{ doctor.price }}
+              </div>
+              <button class="btn btn-primary btn-lg btn-block" type="submit">Book and proceed payment</button>
 
             </form>
 
@@ -60,30 +70,20 @@
   </main>
 
 {% endblock content %}
-
 {% block extra_scripts %}
 <script>
-var hideable_shipping_form = $('.hideable_shipping_form');
-var hideable_billing_form = $('.hideable_billing_form');
-
-var use_default_shipping = document.querySelector("input[name=use_default_shipping]");
-var use_default_billing = document.querySelector("input[name=use_default_billing]");
-
-use_default_shipping.addEventListener('change', function() {
-  if (this.checked) {
-    hideable_shipping_form.hide();
-  } else {
-    hideable_shipping_form.show();
+$('#show-address').hide();
+$('#confirm-address').on('click', function() {
+  var search_input = $('#gmap').contents().find('#location-search-input').val();
+  if (search_input) {
+      if(confirm(`Are you sure you address is ${search_input}`)) {
+          $('input[name=address]').val(search_input);
+          $('#show-address').html(`Address: ${search_input}`);
+          $('#show-address').show();
+          $('#gmap').hide();
+          $(this).hide();
+        }
   }
 })
-
-use_default_billing.addEventListener('change', function() {
-  if (this.checked) {
-    hideable_billing_form.hide();
-  } else {
-    hideable_billing_form.show();
-  }
-})
-
 </script>
-{% endblock extra_scripts %}
+{% endblock %}

@@ -31,6 +31,7 @@ def construct_color_map():
             'purple': ['dermatology'],
             'primary-color': ['ophthalmology'],
             'secondary-color': ['internal-medicine'],
+            'danger-color': ['surgery'],
             }
     res = {}
     for color, affected_list in COLOR_CONSTRUCTOR.items():
@@ -94,7 +95,8 @@ class Doctor(models.Model):
 
     def get_absolute_url(self):
         return reverse("core:product", kwargs={
-            'pk': self.pk
+            'pk': self.pk,
+            'slug': self.slug,
         })
 
     def get_add_to_cart_url(self):
@@ -148,10 +150,15 @@ class OrderItem(models.Model):
 
 class Booking(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    paid = models.BooleanField(default=False)
-    book_date = models.DateTimeField(auto_now_add=True)
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    booked_date = models.DateTimeField(auto_now_add=True)
     payment_date = models.DateTimeField(default=None, null=True)
     examination_date = models.DateTimeField()
+    total = models.FloatField(default=0)
+
+
+    def get_proceed_payment_url(self):
+        return reverse('core:booking-proceed-payment', kwargs={'pk': self.pk})
 
 
 
