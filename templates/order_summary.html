@@ -4,16 +4,17 @@
   <main>
     <div class="container">
 
-    <div class="table-responsive text-nowrap">
+    <div class="table-responsive">
     <h2>Order Summary</h2>
     <table class="table">
         <thead>
         <tr>
             <th scope="col">#</th>
             <th scope="col">Doctor</th>
-            <th scope="col">Booked Date</th>
-            <th scope="col">Payment Date</th>
+            <!-- <th scope="col">Booked Date</th> -->
+            <th scope="col">Paid</th>
             <th scope="col">Examination Date</th>
+            <th scope="col">Addresss</th>
             <th scope="col">Total</th>
             <th scope="col"></th>
         </tr>
@@ -23,18 +24,18 @@
         <tr>
             <th class="align-middle" scope="row">{{ forloop.counter }}</th>
             <td class="align-middle">
-              <span>
+              <div class="row">
                 <img src={{booking.doctor.image.url}} style="width: 150px; height: 150px" class="rounded-circle img-thumbnail">
-              </span>
+              </div>
               <a href="{{booking.doctor.get_absolute_url}}" target="_blank" class="text-info">
                 {{ booking.doctor.name }}
               </a>
             </td>
-            <td class="align-middle">{{ booking.booked_date }}</td>
+            <!-- <td class="align-middle">{{ booking.booked_date }}</td> -->
             <td class="align-middle">
               {% if booking.payment_date %}
               <p class='text-success'>
-              {{ booking.payment_date }}
+              Paid
               </p>
               {% else %}
               <p class='text-warning'>
@@ -44,6 +45,9 @@
             </td>
             <td class="align-middle">
               {{ booking.examination_date }}
+            </td>
+            <td class="align-middle">
+              {{ booking.address }}
             </td>
             <td class="align-middle">
               ${{ booking.total }}
