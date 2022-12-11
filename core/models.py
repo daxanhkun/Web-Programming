@@ -30,6 +30,7 @@ def construct_color_map():
     COLOR_CONSTRUCTOR = {
             'purple': ['dermatology'],
             'primary-color': ['ophthalmology'],
+            'secondary-color': ['internal-medicine'],
             }
     res = {}
     for color, affected_list in COLOR_CONSTRUCTOR.items():
@@ -110,6 +111,10 @@ class Doctor(models.Model):
         return reverse("core:remove-from-cart", kwargs={
             'slug': self.slug
         })
+
+    @property
+    def short_description(self):
+        return self.description[:100]
 
     def title(self):
         return TITLE_MAP[self.label]
